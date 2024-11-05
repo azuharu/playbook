@@ -1,0 +1,18 @@
+---
+- name: Perform Backup
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "/var/backups"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create a compressed archive of the /var/www directory
+      command: tar -czf /var/backups/backup_{{ ansible_date_time.date }}.tar.gz /var/www
+      args:
+        creates: "/var/backups/backup_{{ ansible_date_time.date }}.tar.gz"
