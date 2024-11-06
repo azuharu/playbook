@@ -1,18 +1,36 @@
 ---
-- name: Perform Backup
+- name: Perform Backup and Transfer to Ansible Server
   hosts: all
   become: yes
+  vars:
+    backup_dir: "/var/backups"
+    backup_file: "backup_{{ ansible_date_time.date }}.tar.gz"
 
   tasks:
-    - name: Ensure backup directory exists
+    - name: Ensure backup directory exists on the remote server
       file:
-        path: "/var/backups"
+        path: "{{ backup_dir }}"
         state: directory
         owner: root
         group: root
         mode: '0755'
 
-    - name: Create a compressed archive of the /var/www directory
-      command: tar -czf /var/backups/backup_{{ ansible_date_time.date }}.tar.gz /var/www
+    - name: Create a compressed archive of the /var/www directory on the remote server
+      command: tar -czf {{ backup_dir }}/{{ backup_file }} /var/www
       args:
-        creates: "/var/backups/backup_{{ ansible_date_time.date }}.tar.gz"
+        creates: "{{ backup_dir }}/{{ backup_file }}"
+
+    - name: Ensure backup directory exists on the Ansible server
+      local_action: file path="./backups" state=directory mode=0755
+
+    - name: Fetch the backup file to the Ansible server
+      fetch:
+        src: "{{ backup_dir }}/{{ backup_file }}"
+        dest: "./backups/{{ inventory_hostname }}/"
+        flat: yes
+      become: no
+
+    - name: Clean up backup file on the remote server (optional)
+      file:
+        path: "{{ backup_dir }}/{{ backup_file }}"
+        state: absent
